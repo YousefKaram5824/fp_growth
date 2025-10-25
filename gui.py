@@ -2,10 +2,10 @@ import flet as ft
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import pandas as pd
+import matplotlib.pyplot as plot
+import pandas as pand
 from fp_growth import FPTree, mine_frequent_itemsets, generate_association_rules
-from collections import defaultdict, Counter
+from collections import defaultdict as dict, Counter as count
 import base64
 from io import BytesIO
 
@@ -115,8 +115,7 @@ def main(page: ft.Page):
             page.update()
             return
 
-        # Load data
-        df = pd.read_excel(file_path.value)
+        df = pand.read_excel(file_path.value)
         if "Items" in df.columns:
             transactions = [row["Items"].split(",") for _, row in df.iterrows()]
         elif "items" in df.columns:
@@ -124,16 +123,14 @@ def main(page: ft.Page):
         else:
             transactions = []
             for _, row in df.iterrows():
-                trans = [item for item in row.values if pd.notna(item)]
+                trans = [item for item in row.values if pand.notna(item)]
                 transactions.append(trans)
 
         total_transactions = len(transactions)
         min_sup = int(min_sup * total_transactions)
         min_conf = min_conf
 
-        # Extract distinct items, calculate support, remove non-frequent, sort descending
-
-        item_counts = Counter()
+        item_counts = count()
         for transaction in transactions:
             for item in transaction:
                 item_counts[item] += 1
@@ -144,7 +141,6 @@ def main(page: ft.Page):
             frequent_items.items(), key=lambda x: (-x[1], x[0])
         )
 
-        # Rearrange dataset based on sorted frequent items
         sorted_transactions = []
         for transaction in transactions:
             sorted_trans = [
@@ -153,51 +149,32 @@ def main(page: ft.Page):
             if sorted_trans:
                 sorted_transactions.append([item[0] for item in sorted_trans])
 
-        # Build FP-tree
         tree = FPTree()
         tree.build_from_transactions(sorted_transactions, min_sup)
-
-        # Mine frequent itemsets
         frequent_itemsets = mine_frequent_itemsets(tree, min_sup)
-
-        # Group by length
-        Lk = defaultdict(list)
+        Lk = dict(list)
         for itemset, support in frequent_itemsets:
             Lk[len(itemset)].append((itemset, support))
-
-        # Sort itemsets within each level by support descending, then by itemset alphabetically
         for k in Lk:
             Lk[k].sort(key=lambda x: (-x[1], str(sorted(x[0]))))
 
-        # Generate rules
         rules = generate_association_rules(frequent_itemsets, transactions, min_conf)
 
-        # Visualize tree
         visualize_tree(tree)
-
-        # Populate frequent items table
         populate_frequent_items(sorted_frequent_items)
-
-        # Populate rearranged dataset table
         populate_rearranged_dataset(sorted_transactions)
-
-        # Populate itemsets table
         populate_itemsets(Lk)
-
-        # Populate rules table
         populate_rules(rules)
 
         page.update()
 
     def visualize_tree(tree):
-        fig, ax = plt.subplots(figsize=(6, 4))
+        fig, ax = plot.subplots(figsize=(6, 4))
         positions, edges = tree.get_tree_nodes()
         if positions:
-            # Draw nodes as circles
             xs = [p["x"] for p in positions]
             ys = [p["y"] for p in positions]
             ax.scatter(xs, ys, s=800, c="lightblue", edgecolors="black", zorder=2)
-            # Add labels
             for p in positions:
                 ax.annotate(
                     f"{p['item']}:{p['count']}",
@@ -206,7 +183,6 @@ def main(page: ft.Page):
                     va="center",
                     zorder=3,
                 )
-            # Draw arrows for edges
             for e in edges:
                 dx = e["to"][0] - e["from"][0]
                 dy = e["to"][1] - e["from"][1]
@@ -221,7 +197,6 @@ def main(page: ft.Page):
                     ec="black",
                     zorder=1,
                 )
-            # Center the diagram
             min_x = min(p["x"] for p in positions)
             max_x = max(p["x"] for p in positions)
             min_y = min(p["y"] for p in positions)
@@ -239,7 +214,7 @@ def main(page: ft.Page):
         buf.seek(0)
         img_base64 = base64.b64encode(buf.read()).decode("utf-8")
         tree_image.src_base64 = img_base64
-        plt.close(fig)
+        plot.close(fig)
 
     def populate_itemsets(Lk):
         if itemsets_table.rows is not None:
@@ -248,7 +223,7 @@ def main(page: ft.Page):
             itemsets_table.rows = []
         for k in sorted(Lk.keys()):
             if k == 1:
-                continue  # Skip L1 as it's already shown in frequent_items_table
+                continue
             for itemset, support in Lk[k]:
                 sorted_itemset = sorted(itemset)
                 itemsets_table.rows.append(
