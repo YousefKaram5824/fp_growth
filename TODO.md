@@ -1,0 +1,1 @@
+- [x] Fix support calculation in build_from_transactions method of fp_growth.py to count each item only once per transaction using set(transaction)

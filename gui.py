@@ -116,9 +116,7 @@ def main(page: ft.Page):
             return
 
         df = pand.read_excel(file_path.value)
-        if "Items" in df.columns:
-            transactions = [row["Items"].split(",") for _, row in df.iterrows()]
-        elif "items" in df.columns:
+        if "items" in df.columns:
             transactions = [row["items"].split(",") for _, row in df.iterrows()]
         else:
             transactions = []
@@ -128,11 +126,10 @@ def main(page: ft.Page):
 
         total_transactions = len(transactions)
         min_sup = int(min_sup * total_transactions)
-        min_conf = min_conf
 
         item_counts = count()
         for transaction in transactions:
-            for item in transaction:
+            for item in set(transaction):
                 item_counts[item] += 1
         frequent_items = {
             item: count for item, count in item_counts.items() if count >= min_sup
@@ -216,26 +213,6 @@ def main(page: ft.Page):
         tree_image.src_base64 = img_base64
         plot.close(fig)
 
-    def populate_itemsets(Lk):
-        if itemsets_table.rows is not None:
-            itemsets_table.rows.clear()
-        else:
-            itemsets_table.rows = []
-        for k in sorted(Lk.keys()):
-            if k == 1:
-                continue
-            for itemset, support in Lk[k]:
-                sorted_itemset = sorted(itemset)
-                itemsets_table.rows.append(
-                    ft.DataRow(
-                        cells=[
-                            ft.DataCell(ft.Text(f"L{k}")),
-                            ft.DataCell(ft.Text(str(sorted_itemset))),
-                            ft.DataCell(ft.Text(str(support))),
-                        ]
-                    )
-                )
-
     def populate_frequent_items(sorted_frequent_items):
         if frequent_items_table.rows is not None:
             frequent_items_table.rows.clear()
@@ -265,6 +242,26 @@ def main(page: ft.Page):
                     ]
                 )
             )
+
+    def populate_itemsets(Lk):
+        if itemsets_table.rows is not None:
+            itemsets_table.rows.clear()
+        else:
+            itemsets_table.rows = []
+        for k in sorted(Lk.keys()):
+            if k == 1:
+                continue
+            for itemset, support in Lk[k]:
+                sorted_itemset = sorted(itemset)
+                itemsets_table.rows.append(
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text(f"L{k}")),
+                            ft.DataCell(ft.Text(str(sorted_itemset))),
+                            ft.DataCell(ft.Text(str(support))),
+                        ]
+                    )
+                )
 
     def populate_rules(rules):
         if rules_table.rows is not None:

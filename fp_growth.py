@@ -74,7 +74,7 @@ class FPTree:
     def build_from_transactions(self, transactions, min_sup):
         item_counts = count()
         for transaction in transactions:
-            for item in transaction:
+            for item in set(transaction):
                 item_counts[item] += 1
         frequent_items = {
             item: count for item, count in item_counts.items() if count >= min_sup
