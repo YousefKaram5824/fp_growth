@@ -4,7 +4,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plot
 import pandas as pand
-from fp_growth import FPTree, mine_frequent_itemsets, generate_association_rules
+from fpg import FPTree, mine_frequent_itemsets, generate_association_rules
 from collections import defaultdict as dict, Counter as count
 import base64
 from io import BytesIO
@@ -31,6 +31,8 @@ def main(page: ft.Page):
     page.window.maximized = True
     page.vertical_alignment = ft.MainAxisAlignment.START
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+
+    item_order = {}
 
     file_path = ft.TextField(label="Path file", read_only=True, width=300)
     min_sup_field = ft.TextField(label="Minimum Support (%)", width=300)
@@ -115,14 +117,29 @@ def main(page: ft.Page):
             page.update()
             return
 
-        df = pand.read_excel(file_path.value)
+        try:
+            df = pand.read_excel(file_path.value)
+        except Exception as e:
+            snack = ft.SnackBar(ft.Text(f"Error reading file: {str(e)}"))
+            page.overlay.append(snack)
+            snack.open = True
+            page.update()
+            return
+
         if "items" in df.columns:
-            transactions = [row["items"].split(",") for _, row in df.iterrows()]
+            transactions = [list(dict.fromkeys(row["items"].split(","))) for _, row in df.iterrows()]
         else:
             transactions = []
             for _, row in df.iterrows():
                 trans = [item for item in row.values if pand.notna(item)]
-                transactions.append(trans)
+                transactions.append(list(dict.fromkeys(trans)))
+
+        if not transactions:
+            snack = ft.SnackBar(ft.Text("No transactions found in the file."))
+            page.overlay.append(snack)
+            snack.open = True
+            page.update()
+            return
 
         total_transactions = len(transactions)
         min_sup = int(min_sup * total_transactions)
@@ -137,6 +154,7 @@ def main(page: ft.Page):
         sorted_frequent_items = sorted(
             frequent_items.items(), key=lambda x: (-x[1], x[0])
         )
+        item_order = {item: idx for idx, (item, _) in enumerate(sorted_frequent_items)}
 
         sorted_transactions = []
         for transaction in transactions:
@@ -144,7 +162,7 @@ def main(page: ft.Page):
                 item for item in sorted_frequent_items if item[0] in transaction
             ]
             if sorted_trans:
-                sorted_transactions.append([item[0] for item in sorted_trans])
+                sorted_transactions.append(list(dict.fromkeys([item[0] for item in sorted_trans])))
 
         tree = FPTree()
         tree.build_from_transactions(sorted_transactions, min_sup)
@@ -153,8 +171,7 @@ def main(page: ft.Page):
         for itemset, support in frequent_itemsets:
             Lk[len(itemset)].append((itemset, support))
         for k in Lk:
-            Lk[k].sort(key=lambda x: (-x[1], str(sorted(x[0]))))
-
+            Lk[k].sort(key=lambda x: tuple(sorted(x[0])))
         rules = generate_association_rules(frequent_itemsets, transactions, min_conf)
 
         visualize_tree(tree)
@@ -168,7 +185,12 @@ def main(page: ft.Page):
     def visualize_tree(tree):
         fig, ax = plot.subplots(figsize=(6, 4))
         positions, edges = tree.get_tree_nodes()
-        if positions:
+        if not positions:
+            ax.text(
+                0.5, 0.5, "No tree to visualize", ha="center", va="center", fontsize=12
+            )
+            ax.axis("off")
+        elif positions:
             xs = [p["x"] for p in positions]
             ys = [p["y"] for p in positions]
             ax.scatter(xs, ys, s=800, c="lightblue", edgecolors="black", zorder=2)
@@ -252,12 +274,12 @@ def main(page: ft.Page):
             if k == 1:
                 continue
             for itemset, support in Lk[k]:
-                sorted_itemset = sorted(itemset)
+                reversed_itemset = tuple(reversed(itemset))
                 itemsets_table.rows.append(
                     ft.DataRow(
                         cells=[
                             ft.DataCell(ft.Text(f"L{k}")),
-                            ft.DataCell(ft.Text(str(sorted_itemset))),
+                            ft.DataCell(ft.Text(str(reversed_itemset))),
                             ft.DataCell(ft.Text(str(support))),
                         ]
                     )
@@ -269,11 +291,13 @@ def main(page: ft.Page):
         else:
             rules_table.rows = []
         for rule in rules:
+            sorted_antecedent = list(dict.fromkeys(sorted(rule[0], key=lambda i: item_order.get(i, float('inf')))))
+            sorted_consequent = list(dict.fromkeys(sorted(rule[1], key=lambda i: item_order.get(i, float('inf')))))
             rules_table.rows.append(
                 ft.DataRow(
                     cells=[
-                        ft.DataCell(ft.Text(str(set(rule[0])))),
-                        ft.DataCell(ft.Text(str(set(rule[1])))),
+                        ft.DataCell(ft.Text(str(sorted_antecedent))),
+                        ft.DataCell(ft.Text(str(sorted_consequent))),
                         ft.DataCell(ft.Text(f"{rule[2]:.2f}")),
                         ft.DataCell(ft.Text(f"{rule[3]:.2f}")),
                         ft.DataCell(ft.Text(f"{rule[4]:.2f}")),
