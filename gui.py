@@ -83,7 +83,9 @@ def main(page: ft.Page):
             allowed_extensions=["xlsx"],
         )
 
+    # Start of FP-Growth Algorithm Execution
     def run_algorithm(e):
+        # Check for file selection and input validation
         if not file_path.value:
             snack = ft.SnackBar(ft.Text("Please select an Excel file."))
             page.overlay.append(snack)
@@ -91,6 +93,7 @@ def main(page: ft.Page):
             page.update()
             return
 
+        # Validate min_sup and min_conf inputs
         if (
             min_sup_field.value is None
             or min_conf_field.value is None
@@ -105,6 +108,7 @@ def main(page: ft.Page):
             page.update()
             return
 
+        # Convert min_sup and min_conf to decimal
         try:
             min_sup = float(min_sup_field.value) / 100
             min_conf = float(min_conf_field.value) / 100
@@ -117,52 +121,48 @@ def main(page: ft.Page):
             page.update()
             return
 
-        try:
-            df = pand.read_excel(file_path.value)
-        except Exception as e:
-            snack = ft.SnackBar(ft.Text(f"Error reading file: {str(e)}"))
-            page.overlay.append(snack)
-            snack.open = True
-            page.update()
-            return
+        # Read dataset
+        data_sets = pand.read_excel(file_path.value)
+        print(data_sets.head())
 
-        if "items" in df.columns:
-            transactions = [list(dict.fromkeys(row["items"].split(","))) for _, row in df.iterrows()]
-        else:
-            transactions = []
-            for _, row in df.iterrows():
-                trans = [item for item in row.values if pand.notna(item)]
-                transactions.append(list(dict.fromkeys(trans)))
-
-        if not transactions:
-            snack = ft.SnackBar(ft.Text("No transactions found in the file."))
-            page.overlay.append(snack)
-            snack.open = True
-            page.update()
-            return
-
+        # Preprocess transactions
+        transactions = [
+            list(dict.fromkeys(row["items"].split(",")))
+            for _, row in data_sets.iterrows()
+        ]
+        print("Transactions:", transactions)
         total_transactions = len(transactions)
-        min_sup = int(min_sup * total_transactions)
+        min_sup = min_sup * total_transactions
 
+        # Count item frequencies
         item_counts = count()
         for transaction in transactions:
-            for item in set(transaction):
+            for item in transaction:
                 item_counts[item] += 1
+
+        # Filter items by min_sup
         frequent_items = {
             item: count for item, count in item_counts.items() if count >= min_sup
         }
+        print("Frequent Items:", frequent_items)
+
+        # Sort frequent items by support descendingly first then alphabetically if there are more than one item with same support
         sorted_frequent_items = sorted(
             frequent_items.items(), key=lambda x: (-x[1], x[0])
         )
-        item_order = {item: idx for idx, (item, _) in enumerate(sorted_frequent_items)}
+        print("Sorted Frequent Items:", sorted_frequent_items)
 
+        # Create item order mapping based on sorted frequent items
         sorted_transactions = []
         for transaction in transactions:
             sorted_trans = [
                 item for item in sorted_frequent_items if item[0] in transaction
             ]
             if sorted_trans:
-                sorted_transactions.append(list(dict.fromkeys([item[0] for item in sorted_trans])))
+                sorted_transactions.append(
+                    list(dict.fromkeys([item[0] for item in sorted_trans]))
+                )
+        print("Sorted Transactions:", sorted_transactions)
 
         tree = FPTree()
         tree.build_from_transactions(sorted_transactions, min_sup)
@@ -291,8 +291,16 @@ def main(page: ft.Page):
         else:
             rules_table.rows = []
         for rule in rules:
-            sorted_antecedent = list(dict.fromkeys(sorted(rule[0], key=lambda i: item_order.get(i, float('inf')))))
-            sorted_consequent = list(dict.fromkeys(sorted(rule[1], key=lambda i: item_order.get(i, float('inf')))))
+            sorted_antecedent = list(
+                dict.fromkeys(
+                    sorted(rule[0], key=lambda i: item_order.get(i, float("inf")))
+                )
+            )
+            sorted_consequent = list(
+                dict.fromkeys(
+                    sorted(rule[1], key=lambda i: item_order.get(i, float("inf")))
+                )
+            )
             rules_table.rows.append(
                 ft.DataRow(
                     cells=[
