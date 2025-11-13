@@ -1,5 +1,22 @@
-from collections import defaultdict as dict, Counter as count
-import itertools as it
+from collections import defaultdict, Counter
+import itertools
+
+
+def preprocess_transactions(transactions, min_support):
+    item_counts = Counter()
+    for transaction in transactions:
+        for item in set(transaction):
+            item_counts[item] += 1
+    frequent_items = {
+        item: support for item, support in item_counts.items() if support >= min_support
+    }
+    sorted_items = sorted(frequent_items.keys(), key=lambda x: (-frequent_items[x], x))
+    sorted_transactions = []
+    for transaction in transactions:
+        sorted_trans = [item for item in sorted_items if item in transaction]
+        if sorted_trans:
+            sorted_transactions.append(sorted_trans)
+    return sorted_transactions, frequent_items
 
 
 class FPNode:
@@ -17,7 +34,7 @@ class FPNode:
 class FPTree:
     def __init__(self):
         self.root = FPNode(None)
-        self.header_table = dict(list)
+        self.header_table = defaultdict(list)
         self.item_supports = {}
 
     def get_tree_nodes(
@@ -71,38 +88,19 @@ class FPTree:
                 self.header_table[item].append(new_node)
                 node = new_node
 
-    def build_from_transactions(self, transactions, min_sup):
-        item_counts = count()
-        for transaction in transactions:
-            for item in set(transaction):
-                item_counts[item] += 1
-        frequent_items = {
-            item: sup for item, sup in item_counts.items() if sup >= min_sup
-        }
-        sorted_items = sorted(
-            frequent_items.keys(), key=lambda x: (-frequent_items[x], x)
-        )
-        sorted_transactions = []
-        for transaction in transactions:
-            sorted_trans = [item for item in sorted_items if item in transaction]
-            if sorted_trans:
-                sorted_transactions.append(sorted_trans)
+    def build_from_transactions(self, sorted_transactions, frequent_items):
+        self.item_supports = frequent_items
         for transaction in sorted_transactions:
             self.insert_transaction(transaction)
         for item in self.header_table:
             nodes = self.header_table[item]
             for i in range(len(nodes) - 1):
                 nodes[i].next = nodes[i + 1]
-        self.item_supports = frequent_items
 
 
-def mine_frequent_itemsets(tree, min_sup, prefix=()):
+def get_frequent_itemsets(tree, min_support, prefix=()):
     itemsets = []
-    for item in sorted(
-        tree.header_table.keys(),
-        key=lambda x: (tree.item_supports.get(x, 0), x),
-        reverse=False,
-    ):
+    for item in tree.header_table.keys():
         new_prefix = prefix + (item,)
         itemsets.append(
             (new_prefix, sum(node.count for node in tree.header_table[item]))
@@ -119,17 +117,19 @@ def mine_frequent_itemsets(tree, min_sup, prefix=()):
                 conditional_transactions.extend([path] * node.count)
             node = node.next
         if conditional_transactions:
+            sorted_cond_trans, freq_items = preprocess_transactions(
+                conditional_transactions, min_support
+            )
             conditional_tree = FPTree()
-            conditional_tree.build_from_transactions(conditional_transactions, min_sup)
+            conditional_tree.build_from_transactions(sorted_cond_trans, freq_items)
             itemsets.extend(
-                mine_frequent_itemsets(conditional_tree, min_sup, new_prefix)
+                get_frequent_itemsets(conditional_tree, min_support, new_prefix)
             )
     return itemsets
 
 
-def generate_association_rules(frequent_itemsets, transactions, min_conf):
+def generate_association_rules(frequent_itemsets, total_transactions):
     rules = []
-    total_transactions = len(transactions)
     itemset_supports = {
         frozenset(itemset): support for itemset, support in frequent_itemsets
     }
@@ -137,25 +137,25 @@ def generate_association_rules(frequent_itemsets, transactions, min_conf):
     for itemset, support in frequent_itemsets:
         if len(itemset) > 1:
             for i in range(1, len(itemset)):
-                for antecedent in it.combinations(itemset, i):
+                for antecedent in itertools.combinations(itemset, i):
                     antecedent = frozenset(antecedent)
                     consequent = frozenset(set(itemset) - set(antecedent))
                     if (
                         antecedent in itemset_supports
                         and itemset_supports[antecedent] > 0
+                        and consequent in itemset_supports
                     ):
-                        conf = support / itemset_supports[antecedent]
-                        if conf >= min_conf and consequent in itemset_supports:
-                            lift = conf / (
-                                itemset_supports[consequent] / total_transactions
+                        confidence = support / itemset_supports[antecedent]
+                        lift = confidence / (
+                            itemset_supports[consequent] / total_transactions
+                        )
+                        rules.append(
+                            (
+                                antecedent,
+                                consequent,
+                                support / total_transactions,
+                                confidence,
+                                lift,
                             )
-                            rules.append(
-                                (
-                                    antecedent,
-                                    consequent,
-                                    support / total_transactions,
-                                    conf,
-                                    lift,
-                                )
-                            )
+                        )
     return rules
