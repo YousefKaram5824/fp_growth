@@ -1,5 +1,8 @@
 pandas
 matplotlib
 flet
-pytest
 openpyxl
+base64
+collections
+io
+itertools

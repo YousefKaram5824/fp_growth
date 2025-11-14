@@ -1,4 +1,4 @@
-import matplotlib, pandas, matplotlib.pyplot as plot, base64, flet as ft
+import matplotlib, pandas, matplotlib.pyplot as plot, base64, flet
 from collections import defaultdict
 from io import BytesIO
 from fpg import (
@@ -11,75 +11,72 @@ from fpg import (
 matplotlib.use("Agg")
 
 
-def create_styled_datatable(columns, rows=None):
-    return ft.DataTable(
+def create(columns, rows=None):
+    return flet.DataTable(
         columns=columns,
         rows=rows or [],
-        border=ft.border.all(1, ft.Colors.BLACK),
-        border_radius=ft.border_radius.all(8),
-        vertical_lines=ft.border.BorderSide(1, ft.Colors.BLACK),
-        horizontal_lines=ft.border.BorderSide(1, ft.Colors.BLACK),
-        heading_row_color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK12),
+        border=flet.border.all(1, flet.Colors.BLACK),
+        border_radius=flet.border_radius.all(8),
+        vertical_lines=flet.border.BorderSide(1, flet.Colors.BLACK),
+        horizontal_lines=flet.border.BorderSide(1, flet.Colors.BLACK),
+        heading_row_color=flet.Colors.with_opacity(0.05, flet.Colors.BLACK12),
         heading_row_height=45,
         data_row_max_height=55,
         column_spacing=20,
     )
 
 
-def main(page: ft.Page):
+def main(page: flet.Page):
     page.title = "FP-Growth(Task 1)"
-    page.theme_mode = ft.ThemeMode.LIGHT
+    page.theme_mode = flet.ThemeMode.LIGHT
     page.window.maximized = True
-    page.vertical_alignment = ft.MainAxisAlignment.START
-    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-
-    # Global variables for consistent ordering
-    frequent_items = {}
+    page.vertical_alignment = flet.MainAxisAlignment.START
+    page.horizontal_alignment = flet.CrossAxisAlignment.CENTER
     item_order = {}
 
-    file_path = ft.TextField(label="Path file", read_only=True, width=300)
-    min_sup_field = ft.TextField(label="Minimum Support (%)", width=300)
-    min_conf_field = ft.TextField(label="Minimum Confidence (%)", width=300)
-    tree_image = ft.Image(width=600, height=400, src_base64="")
-    frequent_items_table = create_styled_datatable(
+    file_path = flet.TextField(label="Path file", read_only=True, width=300)
+    min_sup_field = flet.TextField(label="Minimum Support (%)", width=300)
+    min_conf_field = flet.TextField(label="Minimum Confidence (%)", width=300)
+    tree_image = flet.Image(width=600, height=400, src_base64="")
+    frequent_items_table = create(
         [
-            ft.DataColumn(ft.Text("Item")),
-            ft.DataColumn(ft.Text("Support")),
+            flet.DataColumn(flet.Text("Item")),
+            flet.DataColumn(flet.Text("Support")),
         ]
     )
-    rearranged_dataset_table = create_styled_datatable(
+    rearranged_datasets_table = create(
         [
-            ft.DataColumn(ft.Text("Transaction ID")),
-            ft.DataColumn(ft.Text("Items")),
+            flet.DataColumn(flet.Text("Transaction ID")),
+            flet.DataColumn(flet.Text("Items")),
         ]
     )
-    itemsets_table = create_styled_datatable(
+    frequent_itemsets_table = create(
         [
-            ft.DataColumn(ft.Text("Level")),
-            ft.DataColumn(ft.Text("Itemset")),
-            ft.DataColumn(ft.Text("Support")),
+            flet.DataColumn(flet.Text("Level")),
+            flet.DataColumn(flet.Text("Itemset")),
+            flet.DataColumn(flet.Text("Support")),
         ]
     )
-    all_association_rules_table = create_styled_datatable(
+    all_association_rules_table = create(
         [
-            ft.DataColumn(ft.Text("Antecedent")),
-            ft.DataColumn(ft.Text("Consequent")),
-            ft.DataColumn(ft.Text("Support")),
-            ft.DataColumn(ft.Text("Confidence")),
-            ft.DataColumn(ft.Text("Lift")),
+            flet.DataColumn(flet.Text("Antecedent")),
+            flet.DataColumn(flet.Text("Consequent")),
+            flet.DataColumn(flet.Text("Support")),
+            flet.DataColumn(flet.Text("Confidence")),
+            flet.DataColumn(flet.Text("Lift")),
         ]
     )
-    strong_association_rules_table = create_styled_datatable(
+    strong_association_rules_table = create(
         [
-            ft.DataColumn(ft.Text("Antecedent")),
-            ft.DataColumn(ft.Text("Consequent")),
-            ft.DataColumn(ft.Text("Support")),
-            ft.DataColumn(ft.Text("Confidence")),
-            ft.DataColumn(ft.Text("Lift")),
+            flet.DataColumn(flet.Text("Antecedent")),
+            flet.DataColumn(flet.Text("Consequent")),
+            flet.DataColumn(flet.Text("Support")),
+            flet.DataColumn(flet.Text("Confidence")),
+            flet.DataColumn(flet.Text("Lift")),
         ]
     )
 
-    def pick_file_result(e: ft.FilePickerResultEvent):
+    def pick_file_result(e: flet.FilePickerResultEvent):
         if e.files:
             file_path.value = e.files[0].path
             page.update()
@@ -87,25 +84,25 @@ def main(page: ft.Page):
     def select_file(e):
         file_picker.pick_files(
             allow_multiple=False,
-            file_type=ft.FilePickerFileType.CUSTOM,
+            file_type=flet.FilePickerFileType.CUSTOM,
             allowed_extensions=["xlsx"],
         )
 
-    file_picker = ft.FilePicker(on_result=pick_file_result)
+    file_picker = flet.FilePicker(on_result=pick_file_result)
     page.overlay.append(file_picker)
 
-    def run_algorithm(e):
-        frequent_items_table.rows.clear()
-        rearranged_dataset_table.rows.clear()
-        itemsets_table.rows.clear()
-        all_association_rules_table.rows.clear()
-        strong_association_rules_table.rows.clear()
-        min_sup = float(min_sup_field.value) / 100
-        min_conf = float(min_conf_field.value) / 100
-
+    def run(e):
         # 1. Read the transactions table from an Excel file.
         data = pandas.read_excel(file_path.value)
         print(data.head())
+
+        frequent_items_table.rows.clear()
+        rearranged_datasets_table.rows.clear()
+        frequent_itemsets_table.rows.clear()
+        all_association_rules_table.rows.clear()
+        strong_association_rules_table.rows.clear()
+        min_support = float(min_sup_field.value) / 100
+        min_confidence = float(min_conf_field.value) / 100
 
         # 2. Use horizontal data format like the data in section
         horizontal_data_format = [
@@ -115,12 +112,10 @@ def main(page: ft.Page):
 
         # Preprocess transactions to find frequent items
         total_transactions = len(horizontal_data_format)
-        min_sup_count = min_sup * total_transactions
-        sorted_transactions, frequent_items_local = preprocess_transactions(
+        min_sup_count = min_support * total_transactions
+        sorted_transactions, frequent_items = preprocess_transactions(
             horizontal_data_format, min_sup_count
         )
-        nonlocal frequent_items, item_order
-        frequent_items = frequent_items_local
         print("Frequent items:", frequent_items)
 
         # Sort frequent items by support descendingly first then alphabetically if there are more than one item with same support
@@ -129,9 +124,8 @@ def main(page: ft.Page):
         )
         print("Sorted frequent items:", sorted_frequent_items)
 
-        # Create global item order for consistent sorting
         item_order.clear()
-        for i, (item, support) in enumerate(sorted_frequent_items):
+        for _, (item, support) in enumerate(sorted_frequent_items):
             item_order[item] = -support
 
         # 3. Represent the FP-tree for your data
@@ -157,19 +151,19 @@ def main(page: ft.Page):
         # 6. Extract the strong rules.
         # 7. Calculate the dependencies between the items (lift).
         strong_association_rules = [
-            rule for rule in all_association_rules if rule[3] >= min_conf
+            rule for rule in all_association_rules if rule[3] >= min_confidence
         ]
         print("Strong association rules", strong_association_rules)
 
-        visualize_tree(tree)
-        populate_frequent_items(sorted_frequent_items)
-        populate_rearranged_dataset(sorted_transactions)
-        populate_itemsets(Lks)
-        populate_all_association_rules(all_association_rules)
-        populate_strong_association_rules(strong_association_rules)
+        draw_tree(tree)
+        show_frequent_items(sorted_frequent_items)
+        show_rearranged_datasets(sorted_transactions)
+        show_frequent_itemsets(Lks)
+        show_all_association_rules(all_association_rules)
+        show_strong_association_rules(strong_association_rules)
         page.update()
 
-    def visualize_tree(tree):
+    def draw_tree(tree):
         fig, ax = plot.subplots(figsize=(6, 4))
         positions, edges = tree.get_tree_nodes()
         if not positions:
@@ -222,121 +216,143 @@ def main(page: ft.Page):
         tree_image.src_base64 = img_base64
         plot.close(fig)
 
-    def populate_frequent_items(sorted_frequent_items):
+    def show_frequent_items(sorted_frequent_items):
         for item, support in sorted_frequent_items:
             frequent_items_table.rows.append(
-                ft.DataRow(
+                flet.DataRow(
                     cells=[
-                        ft.DataCell(ft.Text(str(item))),
-                        ft.DataCell(ft.Text(str(support))),
+                        flet.DataCell(flet.Text(str(item))),
+                        flet.DataCell(flet.Text(str(support))),
                     ]
                 )
             )
 
-    def populate_rearranged_dataset(sorted_transactions):
+    def show_rearranged_datasets(sorted_transactions):
         for idx, transaction in enumerate(sorted_transactions, start=1):
-            rearranged_dataset_table.rows.append(
-                ft.DataRow(
+            rearranged_datasets_table.rows.append(
+                flet.DataRow(
                     cells=[
-                        ft.DataCell(ft.Text(str(idx))),
-                        ft.DataCell(ft.Text(str(transaction))),
+                        flet.DataCell(flet.Text(str(idx))),
+                        flet.DataCell(flet.Text(str(transaction))),
                     ]
                 )
             )
 
-    def populate_itemsets(Lks):
+    def show_frequent_itemsets(Lks):
         for k in sorted(Lks.keys()):
             if k == 1:
                 continue
             for itemset, support in Lks[k]:
                 sorted_itemset = sorted(itemset, key=lambda x: item_order.get(x, 0))
-                itemsets_table.rows.append(
-                    ft.DataRow(
+                frequent_itemsets_table.rows.append(
+                    flet.DataRow(
                         cells=[
-                            ft.DataCell(ft.Text(f"L{k}")),
-                            ft.DataCell(ft.Text(str(tuple(sorted_itemset)))),
-                            ft.DataCell(ft.Text(str(support))),
+                            flet.DataCell(flet.Text(f"L{k}")),
+                            flet.DataCell(flet.Text(str(tuple(sorted_itemset)))),
+                            flet.DataCell(flet.Text(str(support))),
                         ]
                     )
                 )
 
-    def populate_all_association_rules(all_association_rules):
+    def show_all_association_rules(all_association_rules):
         for rule in all_association_rules:
             sorted_antecedent = sorted(rule[0], key=lambda x: item_order.get(x, 0))
             sorted_consequent = sorted(rule[1], key=lambda x: item_order.get(x, 0))
             all_association_rules_table.rows.append(
-                ft.DataRow(
+                flet.DataRow(
                     cells=[
-                        ft.DataCell(ft.Text(str(sorted_antecedent))),
-                        ft.DataCell(ft.Text(str(sorted_consequent))),
-                        ft.DataCell(ft.Text(f"{rule[2]:.2f}")),
-                        ft.DataCell(ft.Text(f"{rule[3]:.2f}")),
-                        ft.DataCell(ft.Text(f"{rule[4]:.2f}")),
+                        flet.DataCell(flet.Text(str(sorted_antecedent))),
+                        flet.DataCell(flet.Text(str(sorted_consequent))),
+                        flet.DataCell(flet.Text(f"{rule[2]:.2f}")),
+                        flet.DataCell(flet.Text(f"{rule[3]:.2f}")),
+                        flet.DataCell(flet.Text(f"{rule[4]:.2f}")),
                     ]
                 )
             )
 
-    def populate_strong_association_rules(strong_association_rules):
+    def show_strong_association_rules(strong_association_rules):
         for rule in strong_association_rules:
             sorted_antecedent = sorted(rule[0], key=lambda x: item_order.get(x, 0))
             sorted_consequent = sorted(rule[1], key=lambda x: item_order.get(x, 0))
             strong_association_rules_table.rows.append(
-                ft.DataRow(
+                flet.DataRow(
                     cells=[
-                        ft.DataCell(ft.Text(str(sorted_antecedent))),
-                        ft.DataCell(ft.Text(str(sorted_consequent))),
-                        ft.DataCell(ft.Text(f"{rule[2]:.2f}")),
-                        ft.DataCell(ft.Text(f"{rule[3]:.2f}")),
-                        ft.DataCell(ft.Text(f"{rule[4]:.2f}")),
+                        flet.DataCell(flet.Text(str(sorted_antecedent))),
+                        flet.DataCell(flet.Text(str(sorted_consequent))),
+                        flet.DataCell(flet.Text(f"{rule[2]:.2f}")),
+                        flet.DataCell(flet.Text(f"{rule[3]:.2f}")),
+                        flet.DataCell(flet.Text(f"{rule[4]:.2f}")),
                     ]
                 )
             )
 
-    main_content = ft.Column(
+    main_content = flet.Column(
         [
-            ft.Row([file_path, ft.ElevatedButton("Select File", on_click=select_file)]),
-            ft.Row(
+            flet.Row(
                 [
+                    file_path,
+                    flet.ElevatedButton("Select File", on_click=select_file),
                     min_sup_field,
                     min_conf_field,
-                    ft.ElevatedButton("Run FP-Growth", on_click=run_algorithm),
-                ]
+                    flet.ElevatedButton("Run", on_click=run),
+                ],
+                alignment=flet.MainAxisAlignment.CENTER,
             ),
-            ft.Divider(),
-            ft.Text("FP-Tree:", size=16, weight=ft.FontWeight.BOLD),
-            tree_image,
-            ft.Text(
-                "Rearranged Dataset:",
-                size=16,
-                weight=ft.FontWeight.BOLD,
+            flet.Divider(),
+            flet.Row(
+                [
+                    flet.Text("FP-Tree:"),
+                    tree_image,
+                ],
+                alignment=flet.MainAxisAlignment.CENTER,
             ),
-            rearranged_dataset_table,
-            ft.Text(
-                "Frequent Items (L1):",
-                size=16,
-                weight=ft.FontWeight.BOLD,
+            flet.Divider(),
+            flet.Row(
+                [
+                    flet.Column(
+                        [
+                            flet.Text("Rearranged Datasets:"),
+                            rearranged_datasets_table,
+                        ]
+                    ),
+                    flet.Column(
+                        [
+                            flet.Text("Frequent Items (L1):"),
+                            frequent_items_table,
+                        ]
+                    ),
+                    flet.Column(
+                        [
+                            flet.Text("Frequent Itemsets:"),
+                            frequent_itemsets_table,
+                        ]
+                    ),
+                ],
+                vertical_alignment=flet.CrossAxisAlignment.START,
+                alignment=flet.MainAxisAlignment.CENTER,
+                spacing=20,
             ),
-            frequent_items_table,
-            ft.Text(
-                "Frequent Itemsets:",
-                size=16,
-                weight=ft.FontWeight.BOLD,
+            flet.Row(
+                [
+                    flet.Column(
+                        [
+                            flet.Text("All Possible Association Rules:"),
+                            all_association_rules_table,
+                        ]
+                    ),
+                    flet.Column(
+                        [
+                            flet.Text("Strong Association Rules:"),
+                            strong_association_rules_table,
+                        ]
+                    ),
+                ],
+                vertical_alignment=flet.CrossAxisAlignment.START,
+                alignment=flet.MainAxisAlignment.CENTER,
+                spacing=20,
             ),
-            itemsets_table,
-            ft.Text(
-                "All Possible Association Rules:",
-                size=16,
-                weight=ft.FontWeight.BOLD,
-            ),
-            all_association_rules_table,
-            ft.Text(
-                "Strong Association Rules:",
-                size=16,
-                weight=ft.FontWeight.BOLD,
-            ),
-            strong_association_rules_table,
         ],
-        scroll=ft.ScrollMode.AUTO,
+        scroll=flet.ScrollMode.AUTO,
         expand=True,
         spacing=20,
     )
@@ -344,4 +360,4 @@ def main(page: ft.Page):
     page.add(main_content)
 
 
-ft.app(target=main)
+flet.app(target=main)
